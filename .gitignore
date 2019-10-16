@@ -1,0 +1,9 @@
+
+# Editors 
+.vscode/
+.idea/
+
+# Python
+.mypy_cache
+.pytest_cache
+
