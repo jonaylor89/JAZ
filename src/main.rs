@@ -1,4 +1,4 @@
-use git2::{BranchType, Repository};
+use git2::{BranchType, Repository, Signature, Tag, Tree};
 use regex::Regex;
 use std::io::{self, Write};
 use serde_json;
@@ -7,7 +7,6 @@ use std::fs;
 use termion::color;
 
 const CONFIG_FILE: &str = "rules.json";
-use git2::{Blob, Commit, ObjectType, BranchType, Repository, Signature, Tag, Tree};
 
 fn main() {
 
