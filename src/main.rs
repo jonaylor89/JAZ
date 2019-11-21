@@ -4,11 +4,13 @@ use std::io::{self, Write};
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
-use termion::color;
+use termion::color::{self, Fg};
 
 const CONFIG_FILE: &str = "rules.json";
 
 fn main() {
+
+    let info: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
 
     // Get config string
     let conf_str = fs::read_to_string(CONFIG_FILE).unwrap();
@@ -22,18 +24,19 @@ fn main() {
     // Open git repo
     let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
-    println!("[INFO] checking {} key templates", conf.len());
+    println!("{} checking {} key templates", info, conf.len());
 
     for branch in repo.branches(Some(BranchType::Local)).unwrap() {
         // This is not what rust code should look like
         println!(
-            "[INFO] Scanning branch {}",
+            "{} Scanning branch {}",
+            info,
             branch.unwrap().0.name().unwrap().unwrap()
         );
     }
 
     // Print the current start of the git repo
-    println!("[INFO] {} state={:?}", repo.path().display(), repo.state());
+    println!("{} {} state={:?}", info, repo.path().display(), repo.state());
 
     let odb = repo.odb().unwrap();
     odb.foreach(|oid| {
