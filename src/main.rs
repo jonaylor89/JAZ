@@ -4,6 +4,7 @@ use git2::{Repository, BranchType};
 use serde_json;
 use std::fs;
 use std::collections::HashMap;
+use regex::Regex;
 
 const CONFIG_FILE: &str = "rules.json";
 
@@ -15,10 +16,9 @@ fn main() {
     // Make a hashmap of uncompiled regex expressions
     let conf: HashMap<String, String> = serde_json::from_str(&conf_str).unwrap();
 
-    // for (key, val) in &json_map {
+    // for (key, val) in &conf {
     //     println!("{}: \"{}\"", key, val);
     // }
-
 
     // Get path to git repo via command line args or assume current directory
     let repo_root = std::env::args().nth(1).unwrap_or(".".to_string());
@@ -28,8 +28,17 @@ fn main() {
 
     println!("[INFO] checking {} key templates", conf.len());
 
-    for branch in repo.branches(Some(BranchType::Local)).unwrap() {
+    let test = "-----BEGIN OPENSSH PRIVATE KEY-----";
 
+    for (key, val) in &conf {
+        let re = Regex::new(val).unwrap();
+        
+        if re.is_match(test) {
+            println!("[CRITIAL] there is a cred of type `{}` in the repo", key)
+        }
+    }
+
+    for branch in repo.branches(Some(BranchType::Local)).unwrap() {
         
         // This is not what rust code should look like
         println!("[INFO] Scanning branch {}", branch.unwrap().0.name().unwrap().unwrap());
