@@ -1,5 +1,5 @@
+use std::io::{self, Write};
 
-use git2::{Repository, BranchType};
 // use serde_json::json;
 use serde_json;
 use std::fs;
@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use regex::Regex;
 
 const CONFIG_FILE: &str = "rules.json";
+use git2::{Blob, Commit, ObjectType, BranchType, Repository, Signature, Tag, Tree};
 
 fn main() {
 
@@ -28,6 +29,8 @@ fn main() {
 
     println!("[INFO] checking {} key templates", conf.len());
 
+    
+
     let test = "-----BEGIN OPENSSH PRIVATE KEY-----";
 
     for (key, val) in &conf {
@@ -46,5 +49,59 @@ fn main() {
 
     // Print the current start of the git repo
     println!("[INFO] {} state={:?}", repo.path().display(), repo.state());
-
 }
+
+let mut odb = repo.odb().unwrap();
+odb.foreach(|oid| {
+    // println!("{}",oid);
+    let obj = repo.revparse_single(&oid.to_string()).unwrap();
+    // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
+    match obj.kind() {
+        Some(ObjectType::Blob) => {
+            show_blob(obj.as_blob().unwrap());
+        }
+        _ => () // only care about the blobs so ignore anything else.
+    }
+    true
+})
+
+.unwrap();
+fn show_blob(blob: &Blob) {
+    io::stdout().write_all(blob.content()).unwrap();
+}
+
+fn show_commit(commit: &Commit) {
+    println!("tree {}", commit.tree_id());
+    for parent in commit.parent_ids() {
+        println!("parent {}", parent);
+    }
+    show_sig("author", Some(commit.author()));
+    show_sig("committer", Some(commit.committer()));
+    if let Some(msg) = commit.message() {
+        println!("\n{}", msg);
+    }
+}
+
+fn show_sig(header: &str, sig: Option<Signature>) {
+    let sig = match sig {
+        Some(s) => s,
+        None => return,
+    };
+    let offset = sig.when().offset_minutes();
+    let (sign, offset) = if offset < 0 {
+        ('-', -offset)
+    } else {
+        ('+', offset)
+    };
+    let (hours, minutes) = (offset / 60, offset % 60);
+    println!(
+        "{} {} {} {}{:02}{:02}",
+        header,
+        sig,
+        sig.when().seconds(),
+        sign,
+        hours,
+        minutes
+    );
+}
+
