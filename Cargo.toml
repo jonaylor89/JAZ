@@ -1,8 +1,8 @@
 [package]
 name = "JAZ"
-version = "0.1.0"
-authors = ["John Naylor <jonaylor89@gmail.com>"]
-edition = "2019"
+version = "0.0.1"
+authors = ["John Naylor <jonaylor89@gmail.com>", "Zephyr Headley <headleyjz@vcu.edu"]
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
