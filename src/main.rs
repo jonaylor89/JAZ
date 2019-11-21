@@ -1,4 +1,4 @@
-use git2::{BranchType, Repository, Signature, Tag, Tree};
+use git2::{BranchType, Repository, ObjectType, Blob};
 use regex::Regex;
 use std::io::{self, Write};
 use serde_json;
@@ -24,7 +24,6 @@ fn main() {
 
     println!("[INFO] checking {} key templates", conf.len());
 
-    
 
     let test = "-----BEGIN OPENSSH PRIVATE KEY-----";
 
