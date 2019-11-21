@@ -24,16 +24,6 @@ fn main() {
 
     println!("[INFO] checking {} key templates", conf.len());
 
-
-    let test = "-----BEGIN OPENSSH PRIVATE KEY-----";
-
-    for (key, val) in &conf {
-        let re = Regex::new(val).unwrap();
-        if re.is_match(test) {
-            println!("{}[CRITIAL]{} there is a cred of type `{}` in the repo", color::Fg(color::Red), color::Fg(color::Reset), key)
-        }
-    }
-
     for branch in repo.branches(Some(BranchType::Local)).unwrap() {
         // This is not what rust code should look like
         println!(
@@ -61,7 +51,16 @@ fn main() {
     .unwrap();
 }
 
+fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<String> {
+    for (key, val) in bads {
+        let re = Regex::new(val).unwrap();
+        if re.is_match(maybe) {
+            return Some(key.to_string())
+        }
+    }
 
+    None
+}
 
 fn show_blob(blob: &Blob) {
     io::stdout().write_all(blob.content()).unwrap();
