@@ -1,10 +1,10 @@
-use git2::{BranchType, Repository, ObjectType, Blob};
+use git2::{BranchType, Repository, ObjectType};
 use regex::Regex;
-use std::io::{self, Write};
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
 use termion::color::{self, Fg};
+use std::str::from_utf8;
 
 const CONFIG_FILE: &str = "rules.json";
 
@@ -46,7 +46,9 @@ fn main() {
         // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
         match obj.kind() {
             Some(ObjectType::Blob) => {
-                show_blob(obj.as_blob().unwrap());
+                let blob_str = from_utf8(obj.as_blob().unwrap().content()).unwrap();
+                // println!("{}",blob_str);
+                println!("oid {} is {}",oid, is_bad(blob_str, &conf).unwrap_or("safe".to_string()))
             }
             _ => () // only care about the blobs so ignore anything else.
         }
@@ -62,11 +64,6 @@ fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<String> {
             return Some(key.to_string())
         }
     }
-
     None
-}
-
-fn show_blob(blob: &Blob) {
-    io::stdout().write_all(blob.content()).unwrap();
 }
 
