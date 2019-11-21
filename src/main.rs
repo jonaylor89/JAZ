@@ -1,15 +1,14 @@
-use git2::{BranchType, Repository, ObjectType};
+use git2::{BranchType, ObjectType, Repository};
 use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
-use termion::color::{self, Fg};
 use std::str::from_utf8;
+use termion::color::{self, Fg};
 
 const CONFIG_FILE: &str = "rules.json";
 
 fn main() {
-
     let info: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
     let critical: String = format!("{}[CRITICAL]{}", Fg(color::RED), Fg(color::Reset));
 
@@ -37,7 +36,12 @@ fn main() {
     }
 
     // Print the current start of the git repo
-    println!("{} {} state={:?}", info, repo.path().display(), repo.state());
+    println!(
+        "{} {} state={:?}",
+        info,
+        repo.path().display(),
+        repo.state()
+    );
 
     let odb = repo.odb().unwrap();
     odb.foreach(|oid| {
@@ -48,9 +52,14 @@ fn main() {
             Some(ObjectType::Blob) => {
                 let blob_str = from_utf8(obj.as_blob().unwrap().content()).unwrap();
                 // println!("{}",blob_str);
-                println!("oid {} is {}",oid, is_bad(blob_str, &conf).unwrap_or("safe".to_string()))
+                println!(
+                    "{} oid {} is {}",
+                    critical,
+                    oid,
+                    is_bad(blob_str, &conf).unwrap_or("safe".to_string())
+                )
             }
-            _ => () // only care about the blobs so ignore anything else.
+            _ => (), // only care about the blobs so ignore anything else.
         }
         true
     })
@@ -61,9 +70,8 @@ fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<String> {
     for (key, val) in bads {
         let re = Regex::new(val).unwrap();
         if re.is_match(maybe) {
-            return Some(key.to_string())
+            return Some(key.to_string());
         }
     }
     None
 }
-
