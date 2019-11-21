@@ -1,5 +1,5 @@
 [package]
-name = "JAZ"
+name = "jaz"
 version = "0.0.1"
 authors = ["John Naylor <jonaylor89@gmail.com>", "Zephyr Headley <headleyjz@vcu.edu>"]
 edition = "2018"
@@ -10,3 +10,4 @@ edition = "2018"
 git2 = "0.10" 
 serde_json = "1.0"
 regex = "1"
+termion = "1.5.3"
