@@ -11,6 +11,7 @@ const CONFIG_FILE: &str = "rules.json";
 fn main() {
 
     let info: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
+    let critical: String = format!("{}[CRITICAL]{}", Fg(color::RED), Fg(color::Reset));
 
     // Get config string
     let conf_str = fs::read_to_string(CONFIG_FILE).unwrap();
