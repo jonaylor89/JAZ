@@ -52,12 +52,10 @@ fn main() {
             Some(ObjectType::Blob) => {
                 let blob_str = from_utf8(obj.as_blob().unwrap().content()).unwrap();
                 // println!("{}",blob_str);
-                println!(
-                    "{} oid {} is {}",
-                    critical,
-                    oid,
-                    is_bad(blob_str, &conf).unwrap_or("safe".to_string())
-                )
+                match is_bad(blob_str, &conf) {
+                    Some(x) => println!("{} oid {} has a secret of type `{}`",critical, oid, x),
+                    None => println!("{} oid {} is {}", info, oid, "safe".to_string()),
+                }
             }
             _ => (), // only care about the blobs so ignore anything else.
         }
