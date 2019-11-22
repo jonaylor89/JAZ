@@ -24,13 +24,13 @@ fn main() {
     // Open git repo
     let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
-    println!("{} checking {} key templates", info, conf.len());
     println!(
         "{} {} state={:?}",
         info,
         repo.path().display(),
         repo.state()
     );
+    println!("{} checking {} key templates", info, conf.len());
     println!("--------------------------------------------------------------------------");
 
     let odb = repo.odb().unwrap();
