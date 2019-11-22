@@ -1,4 +1,4 @@
-use git2::{BranchType, ObjectType, Repository};
+use git2::{ObjectType, Repository};
 use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
@@ -25,23 +25,13 @@ fn main() {
     let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
     println!("{} checking {} key templates", info, conf.len());
-
-    for branch in repo.branches(Some(BranchType::Local)).unwrap() {
-        // This is not what rust code should look like
-        println!(
-            "{} Scanning branch {}",
-            info,
-            branch.unwrap().0.name().unwrap().unwrap()
-        );
-    }
-
-    // Print the current start of the git repo
     println!(
         "{} {} state={:?}",
         info,
         repo.path().display(),
         repo.state()
     );
+    println!("--------------------------------------------------------------------------");
 
     let odb = repo.odb().unwrap();
     odb.foreach(|oid| {
@@ -55,7 +45,7 @@ fn main() {
                 match is_bad(blob_str, &conf) {
                     Some(x) => println!("{} oid {} has a secret of type `{}`", critical, oid, x),
                     // None => println!("{} oid {} is {}", info, oid, "safe".to_string()),
-                    None => (), 
+                    None => (),
                 }
             }
             _ => (), // only care about the blobs so ignore anything else.
