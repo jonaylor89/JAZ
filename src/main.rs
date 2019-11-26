@@ -38,33 +38,47 @@ fn main() {
     println!("{} checking {} key templates", info!(), conf.len());
     println!("--------------------------------------------------------------------------");
 
+    // Get object database from the repo
     let odb = repo.odb().unwrap();
     let mut children = vec![];
+
+    // Loop through objects in db 
     odb.foreach(|oid| {
-        let object_id:git2::Oid = oid.clone();
-        let config :HashMap<String, String>= conf.clone();
-        let repository:git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+        let object_id = oid.clone();
+        let config = conf.clone();
+        let repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+
+        // Spawn a thread to look for secrets in the object
         children.push(std::thread::spawn( move || scan_object(repository, &object_id, config)));
         true
     })
     .unwrap();
+
     let num_children = &children.len();
+
     for child in children {
         let _ = child.join();
     }
+
     println!("{} Spawned {} threads", info!(), num_children);
 }
 
 fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, String>){
+
+    // Get the object from the oid
     let obj = repo.revparse_single(&oid.to_string()).unwrap();
         // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
         match obj.kind() {
+
+            // Only grab objects associated with blobs
             Some(ObjectType::Blob) => {
                 let blob_str = match from_utf8(obj.as_blob().unwrap().content()) {
                     Ok(x)=>x,
                     Err(_)=>return,
                 };
                 // println!("{}",blob_str);
+
+                // Check if the blob contains secrets
                 match is_bad(blob_str, &conf) {
                     Some(bad_commits) => {
                             for bad in bad_commits {
@@ -78,16 +92,19 @@ fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, Stri
             _ => (), // only care about the blobs so ignore anything else.
         }
 }
-// is_bad : if secret found it's type is returned, otherwise return None
+// is_bad : if secrets are found in blob then they are returned as a vector, otherwise return None
 fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<Vec<String>> {
     let mut bad_commits = vec![];
     for (key, val) in bads {
+
+        // Use regex from rules file to match against blob
         let re = Regex::new(val).unwrap();
         if re.is_match(maybe) {
             bad_commits.push(key.to_string());
         }
     }
-    if bad_commits.len() > 0{
+    if bad_commits.len() > 0 {
+        // Return bad commits if there are any
         return Some(bad_commits);
     }
     None
