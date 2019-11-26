@@ -63,7 +63,7 @@ fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, Stri
                 };
                 // println!("{}",blob_str);
                 match is_bad(blob_str, &conf) {
-                    Some(x) => println!("{} oid {} has a secret of type `{}`", CRITICAL, oid, x),
+                    Some(x) => println!("{} commit {} has a secret of type `{}`", CRITICAL, oid, x),
                     // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
                     None => (),
                 }
