@@ -1,7 +1,17 @@
 # JAZ
 Find secrets hidden in commits
 
-# todo
+# Building
+```
+~$ cargo build --release
+```
+
+# Usage
+```
+~$ ./jaz /path/to/repo
+```
+
+# TODO
 - Multithreading
     - Right now it's too slow
 - Give better output
