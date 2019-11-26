@@ -12,5 +12,4 @@ Find secrets hidden in commits
 ```
 
 # TODO
-- Scan remote repos
-    - Either use github api orclone onto local machine
+- Make a homebrew release???
