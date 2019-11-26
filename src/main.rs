@@ -24,10 +24,10 @@ fn main() {
     let conf: HashMap<String, String> = serde_json::from_str(&conf_str).unwrap();
 
     // Get path to git repo via command line args or assume current directory
-    let repo_root:String = std::env::args().nth(1).unwrap_or(".".to_string());
+    let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
 
     // Open git repo
-    let repo:git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+    let repo: git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
     println!(
         "{} {} state={:?}",
