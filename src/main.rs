@@ -1,4 +1,4 @@
-use git2::{ObjectType, Repository};
+use git2::{ObjectType, Oid, Repository};
 use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ fn main() {
     let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
 
     // Open git repo
-    let repo: git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
     println!(
         "{} {} state={:?}",
@@ -44,12 +44,15 @@ fn main() {
 
     // Loop through objects in db 
     odb.foreach(|oid| {
+
         let object_id = oid.clone();
         let config = conf.clone();
         let repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
         // Spawn a thread to look for secrets in the object
         children.push(std::thread::spawn( move || scan_object(repository, &object_id, config)));
+
+        // Return true because the closure has to return a boolean
         true
     })
     .unwrap();
@@ -63,7 +66,7 @@ fn main() {
     println!("{} Spawned {} threads", info!(), num_children);
 }
 
-fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, String>){
+fn scan_object(repo: Repository, oid: &Oid, conf: HashMap<String, String>){
 
     // Get the object from the oid
     let obj = repo.revparse_single(&oid.to_string()).unwrap();
