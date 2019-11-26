@@ -25,7 +25,7 @@ fn main() {
     let conf: HashMap<String, String> = serde_json::from_str(&conf_str).unwrap();
 
     // Get path to git repo via command line args or assume current directory
-    let repo_root:String = std::env::args().nth(1).unwrap_or(".".to_string());
+    let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
 
     let repo:git2::Repository;
     // if repo_root.starts_with("http"){
@@ -35,6 +35,9 @@ fn main() {
         // Open git repo
         repo= Repository::open(repo_root.as_str()).expect("Couldn't open repository");
     // }
+    // Open git repo
+    let repo: git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+
     println!(
         "{} {} state={:?}",
         info!(),
@@ -54,7 +57,7 @@ fn main() {
         true
     })
     .unwrap();
-    println!("Spawned {} threads",children.len());
+    println!("{} Spawned {} threads", info!(), children.len());
     for child in children {
         let _ = child.join();
     }
