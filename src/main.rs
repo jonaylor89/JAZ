@@ -8,6 +8,7 @@ use termion::color::{self, Fg};
 
 const CONFIG_FILE: &str = "rules.json";
 
+// Macros for logging
 macro_rules! info { 
     () => { format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset)) }; 
 } 
