@@ -9,9 +9,9 @@ use termion::color::{self, Fg};
 const CONFIG_FILE: &str = "rules.json";
 
 fn main() {
-    let info: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
-    let critical: String = format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset));
-
+    let INFO: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
+    let CRITICAL: String = format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset));
+    
     // Get config string
     let conf_str = fs::read_to_string(CONFIG_FILE).unwrap();
 
@@ -19,42 +19,58 @@ fn main() {
     let conf: HashMap<String, String> = serde_json::from_str(&conf_str).unwrap();
 
     // Get path to git repo via command line args or assume current directory
-    let repo_root = std::env::args().nth(1).unwrap_or(".".to_string());
+    let repo_root:String = std::env::args().nth(1).unwrap_or(".".to_string());
 
     // Open git repo
-    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+    let repo:git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
     println!(
         "{} {} state={:?}",
-        info,
+        INFO,
         repo.path().display(),
         repo.state()
     );
-    println!("{} checking {} key templates", info, conf.len());
+    println!("{} checking {} key templates", INFO, conf.len());
     println!("--------------------------------------------------------------------------");
 
     let odb = repo.odb().unwrap();
+    let mut children = vec![];
     odb.foreach(|oid| {
-        // println!("{}",oid);
-        let obj = repo.revparse_single(&oid.to_string()).unwrap();
+        let object_id:git2::Oid = oid.clone();
+        let config :HashMap<String, String>= conf.clone();
+        let repository:git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+        children.push(std::thread::spawn( move || scan_object(repository, &object_id, config)));
+        true
+    })
+    .unwrap();
+
+
+    for child in children {
+        let _ = child.join();
+    }
+}
+
+fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, String>){
+    let INFO: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
+    let CRITICAL: String = format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset));
+    let obj = repo.revparse_single(&oid.to_string()).unwrap();
         // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
         match obj.kind() {
             Some(ObjectType::Blob) => {
-                let blob_str = from_utf8(obj.as_blob().unwrap().content()).unwrap();
+                let blob_str = match from_utf8(obj.as_blob().unwrap().content()) {
+                    Ok(x)=>x,
+                    Err(_)=>return,
+                };
                 // println!("{}",blob_str);
                 match is_bad(blob_str, &conf) {
-                    Some(x) => println!("{} commit {} has a secret of type `{}`", critical, oid, x),
-                    // None => println!("{} oid {} is {}", info, oid, "safe".to_string()),
+                    Some(x) => println!("{} commit {} has a secret of type `{}`", CRITICAL, oid, x),
+                    // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
                     None => (),
                 }
             }
             _ => (), // only care about the blobs so ignore anything else.
         }
-        true
-    })
-    .unwrap();
 }
-
 // is_bad : if secret found it's type is returned, otherwise return None
 fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<String> {
     for (key, val) in bads {
