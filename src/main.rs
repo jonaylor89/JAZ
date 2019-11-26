@@ -8,10 +8,15 @@ use termion::color::{self, Fg};
 
 const CONFIG_FILE: &str = "rules.json";
 
+macro_rules! info { 
+    () => { format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset)) }; 
+} 
+
+macro_rules! critical { 
+    () => { format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset)) }; 
+} 
+
 fn main() {
-    let INFO: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
-    let CRITICAL: String = format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset));
-    
     // Get config string
     let conf_str = fs::read_to_string(CONFIG_FILE).unwrap();
 
@@ -26,11 +31,11 @@ fn main() {
 
     println!(
         "{} {} state={:?}",
-        INFO,
+        info!(),
         repo.path().display(),
         repo.state()
     );
-    println!("{} checking {} key templates", INFO, conf.len());
+    println!("{} checking {} key templates", info!(), conf.len());
     println!("--------------------------------------------------------------------------");
 
     let odb = repo.odb().unwrap();
@@ -51,8 +56,6 @@ fn main() {
 }
 
 fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, String>){
-    let INFO: String = format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset));
-    let CRITICAL: String = format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset));
     let obj = repo.revparse_single(&oid.to_string()).unwrap();
         // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
         match obj.kind() {
@@ -63,7 +66,7 @@ fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, Stri
                 };
                 // println!("{}",blob_str);
                 match is_bad(blob_str, &conf) {
-                    Some(x) => println!("{} commit {} has a secret of type `{}`", CRITICAL, oid, x),
+                    Some(x) => println!("{} commit {} has a secret of type `{}`", critical!(), oid, x),
                     // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
                     None => (),
                 }
