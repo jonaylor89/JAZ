@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::str::from_utf8;
 use termion::color::{self, Fg};
-use std::path::Path;
 
 const CONFIG_FILE: &str = "rules.json";
 
@@ -27,14 +26,6 @@ fn main() {
     // Get path to git repo via command line args or assume current directory
     let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
 
-    let repo:git2::Repository;
-    // if repo_root.starts_with("http"){
-        // repo = Repository::clone(repo_root.as_str(),Path::new("/tmp/repo/")).expect("Couldn't open remote repository");
-    // }
-    // else{
-        // Open git repo
-        repo= Repository::open(repo_root.as_str()).expect("Couldn't open repository");
-    // }
     // Open git repo
     let repo: git2::Repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
