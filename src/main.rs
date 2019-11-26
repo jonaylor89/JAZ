@@ -43,8 +43,7 @@ fn main() {
         true
     })
     .unwrap();
-
-
+    println!("Spawned {} threads",children.len());
     for child in children {
         let _ = child.join();
     }
@@ -63,7 +62,11 @@ fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, Stri
                 };
                 // println!("{}",blob_str);
                 match is_bad(blob_str, &conf) {
-                    Some(x) => println!("{} commit {} has a secret of type `{}`", CRITICAL, oid, x),
+                    Some(bad_commits) => {
+                            for bad in bad_commits {
+                                println!("{} commit {} has a secret of type `{}`", CRITICAL, oid, bad);
+                            }
+                        },
                     // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
                     None => (),
                 }
@@ -72,12 +75,16 @@ fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, Stri
         }
 }
 // is_bad : if secret found it's type is returned, otherwise return None
-fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<String> {
+fn is_bad(maybe: &str, bads: &HashMap<String, String>) -> Option<Vec<String>> {
+    let mut bad_commits = vec![];
     for (key, val) in bads {
         let re = Regex::new(val).unwrap();
         if re.is_match(maybe) {
-            return Some(key.to_string());
+            bad_commits.push(key.to_string());
         }
+    }
+    if bad_commits.len() > 0{
+        return Some(bad_commits);
     }
     None
 }
