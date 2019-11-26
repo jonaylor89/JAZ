@@ -48,7 +48,7 @@ fn main() {
         true
     })
     .unwrap();
-    println!("Spawned {} threads",children.len());
+    println!("{} Spawned {} threads", info!(), children.len());
     for child in children {
         let _ = child.join();
     }
