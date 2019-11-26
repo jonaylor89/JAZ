@@ -48,10 +48,11 @@ fn main() {
         true
     })
     .unwrap();
-    println!("{} Spawned {} threads", info!(), children.len());
+    let num_children = &children.len();
     for child in children {
         let _ = child.join();
     }
+    println!("{} Spawned {} threads", info!(), num_children);
 }
 
 fn scan_object(repo:git2::Repository, oid:&git2::Oid, conf: HashMap<String, String>){
