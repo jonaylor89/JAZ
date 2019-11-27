@@ -2,6 +2,11 @@
 
 Find secrets hidden in commits
 
+# Installing
+```
+~$ cargo install jaz
+```
+
 # Building
 ```
 ~$ cargo build --release
@@ -11,10 +16,5 @@ Find secrets hidden in commits
 
 # Usage
 ```
-~$ cargo run --release /path/to/repo
+~$ jaz /path/to/repo
 ```
-
---------------------------------
-
-# TODO
-- Make a homebrew release???
