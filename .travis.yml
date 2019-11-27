@@ -1,16 +1,15 @@
-
 language: rust
 rust:
-  - stable
-  - beta
-  - nightly
+- stable
+- beta
+- nightly
 jobs:
   allow_failures:
-    - rust: nightly
-cache: cargo
+  - rust: nightly
 deploy:
-  provider: bintray
-  file: "Path to a descriptor file, containing information for the Bintray upload"
-  user: "jonaylor89"
-  key: "Bintray API key"
-  skip_cleanup: true # to upload artifacts created during the build
+  provider: releases
+  api_key:
+    secure: Ds2i7A90HtYOnbKpeTVtoKXHQgbe1HK1vR1Hc4+utQeAsBmv8hJmNi0g4OL72DNw7ev+bEbg8wCcE3O35vATKmAv9/XR/eGtq2+SnS72+O6r30Q6J9ZZ7nKYuB2waBltWiwPsuVK7+HkxGTviMHFEOsSOcJA9hAKpgbNFh4q4d06tBFh9Tg2+3ltTCDO+Yf260jba7jdVE8FmGDorYjyBzoFED/JmOX3t3AANI+H1GZMPD79GFERRuus2iaehoKs7M5drhO6XuSMMODXztqbcjpyqd5IbVHLcs98v9eaoEuoyABrERsHDGcC34z6p/gV5aaJefhhpCm78r0t6kZSFqNDqqiSSMgghNjlj8O/pqk8XNW21kl31oU6RJHY6s4eq131T1Tx+swW4IPOI6645sNEl6qrRdQkdEDjgpQDIv4GVNl8r6jkhEPr8skDR8hKuEH4nIDqSQKWL+qpYFpAC0q1iXnJsjnbuaXcoyJYpMhhiE4RDEMy2Algq4uwi09x3Jm6DYvMobYJ2X4x/nINTFfeng4vNP8z8ODhOw7m7FLiWYr25ANwPlqoRxAtFLeLZlRvtIgbFP95Ng6a70qjZBpVPY6y+V1Q/JxYwIrxI8utp3LUvv0cnfOEvnkWGZ2kpYcoGDrRNP028fhuXq1SBf9WWKJq8EMU33At/HcnYl4=
+  file: 'deployment/${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.tar.gz'
+  on:
+    repo: jonaylor89/JAZ
