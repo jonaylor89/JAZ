@@ -2,7 +2,7 @@
 name = "jaz"
 version = "0.0.2"
 authors = ["John Naylor <jonaylor89@gmail.com>", "Zephyr Headley <headleyjz@vcu.edu>"]
-edition = "2018"
+edition = "2021"
 description = "Find secrets hidden in commits"
 repository = "https://github.com/jonaylor89/JAZ"
 license = "MIT"
@@ -10,8 +10,6 @@ readme = "README.md"
 exclude = [
   "assets/*"
 ]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 git2 = "0.10" 
