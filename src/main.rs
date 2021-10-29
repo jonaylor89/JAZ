@@ -2,16 +2,19 @@ use git2::{ObjectType, Oid, Repository};
 use regex::Regex;
 use std::collections::HashMap;
 use std::str::from_utf8;
-use termion::color::{self, Fg};
 
 // Macros for logging
-macro_rules! info { 
-    () => { format!("{}[INFO]{}", Fg(color::Green), Fg(color::Reset)) }; 
-} 
+macro_rules! info {
+    () => {
+        format!("{}[INFO]{}", "\x1B[32m", "\x1B[0m")
+    };
+}
 
-macro_rules! critical { 
-    () => { format!("{}[CRITICAL]{}", Fg(color::Red), Fg(color::Reset)) }; 
-} 
+macro_rules! critical {
+    () => {
+        format!("{}[CRITICAL]{}", "\x1B[31m", "\x1B[0m")
+    };
+}
 
 fn main() {
     // Get config string
@@ -60,15 +63,16 @@ fn main() {
     let odb = repo.odb().unwrap();
     let mut children = vec![];
 
-    // Loop through objects in db 
+    // Loop through objects in db
     odb.foreach(|oid| {
-
         let object_id = oid.clone();
         let config = rules.clone();
         let repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
         // Spawn a thread to look for secrets in the object
-        children.push(std::thread::spawn( move || scan_object(repository, &object_id, config)));
+        children.push(std::thread::spawn(move || {
+            scan_object(repository, &object_id, config)
+        }));
 
         // Return true because the closure has to return a boolean
         true
@@ -84,40 +88,42 @@ fn main() {
     println!("{} Spawned {} threads", info!(), num_children);
 }
 
-fn scan_object(repo: Repository, oid: &Oid, conf: HashMap<&str, &str>){
-
+fn scan_object(repo: Repository, oid: &Oid, conf: HashMap<&str, &str>) {
     // Get the object from the oid
     let obj = repo.revparse_single(&oid.to_string()).unwrap();
-        // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
-        match obj.kind() {
+    // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
+    match obj.kind() {
+        // Only grab objects associated with blobs
+        Some(ObjectType::Blob) => {
+            let blob_str = match from_utf8(obj.as_blob().unwrap().content()) {
+                Ok(x) => x,
+                Err(_) => return,
+            };
+            // println!("{}",blob_str);
 
-            // Only grab objects associated with blobs
-            Some(ObjectType::Blob) => {
-                let blob_str = match from_utf8(obj.as_blob().unwrap().content()) {
-                    Ok(x)=>x,
-                    Err(_)=>return,
-                };
-                // println!("{}",blob_str);
-
-                // Check if the blob contains secrets
-                match is_bad(blob_str, &conf) {
-                    Some(bad_commits) => {
-                            for bad in bad_commits {
-                                println!("{} commit {} has a secret of type `{}`", critical!(), oid, bad);
-                            }
-                        },
-                    // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
-                    None => (),
+            // Check if the blob contains secrets
+            match is_bad(blob_str, &conf) {
+                Some(bad_commits) => {
+                    for bad in bad_commits {
+                        println!(
+                            "{} commit {} has a secret of type `{}`",
+                            critical!(),
+                            oid,
+                            bad
+                        );
+                    }
                 }
+                // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
+                None => (),
             }
-            _ => (), // only care about the blobs so ignore anything else.
         }
+        _ => (), // only care about the blobs so ignore anything else.
+    }
 }
 // is_bad : if secrets are found in blob then they are returned as a vector, otherwise return None
 fn is_bad(maybe: &str, bads: &HashMap<&str, &str>) -> Option<Vec<String>> {
     let mut bad_commits = vec![];
     for (key, val) in bads {
-
         // Use regex from rules file to match against blob
         let re = Regex::new(val).unwrap();
         if re.is_match(maybe) {
