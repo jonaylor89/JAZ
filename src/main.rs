@@ -106,7 +106,7 @@ fn scan_object(repo: Repository, oid: &Oid, conf: HashMap<&str, &str>) {
                 Some(bad_commits) => {
                     for bad in bad_commits {
                         println!(
-                            "{} commit {} has a secret of type `{}`",
+                            "{} object {} has a secret of type `{}`",
                             critical!(),
                             oid,
                             bad
