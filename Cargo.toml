@@ -13,7 +13,6 @@ exclude = [
 
 [dependencies]
 git2 = "0.13" 
-serde_json = "1.0"
 regex = "1.5.4"
 
 [package.metadata.arch]
