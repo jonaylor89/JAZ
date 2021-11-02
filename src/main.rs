@@ -1,7 +1,6 @@
-use git2::{ObjectType, Oid, Repository};
+use git2::{ObjectType, Object, Oid, Repository};
 use regex::Regex;
 use std::collections::HashMap;
-use std::str::from_utf8;
 
 // Macros for logging
 macro_rules! info {
@@ -17,12 +16,6 @@ macro_rules! critical {
 }
 
 fn main() {
-    // Get config string
-    // let conf_str = fs::read_to_string(CONFIG_FILE).unwrap();
-
-    // Make a hashmap of uncompiled regex expressions
-    // let conf: HashMap<String, String> = serde_json::from_str(&conf_str).unwrap();
-
     let rules = HashMap::from([
         ("Slack Token", "(xox[p|b|o|a]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})"),
         ("RSA private key", "-----BEGIN RSA PRIVATE KEY-----"),
@@ -61,41 +54,28 @@ fn main() {
 
     // Get object database from the repo
     let odb = repo.odb().unwrap();
-    let mut children = vec![];
 
     // Loop through objects in db
     odb.foreach(|oid| {
-        let object_id = oid.clone();
-        let config = rules.clone();
-        let repository = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
 
-        // Spawn a thread to look for secrets in the object
-        children.push(std::thread::spawn(move || {
-            scan_object(repository, &object_id, config)
-        }));
+        let config = rules.clone();
+        let obj = repo.revparse_single(&oid.to_string()).unwrap();
+
+        // Look for secrets in the object
+        scan_object(&obj, oid, config);
 
         // Return true because the closure has to return a boolean
         true
     })
     .unwrap();
-
-    let num_children = &children.len();
-
-    for child in children {
-        let _ = child.join();
-    }
-
-    println!("{} Spawned {} threads", info!(), num_children);
 }
 
-fn scan_object(repo: Repository, oid: &Oid, conf: HashMap<&str, &str>) {
-    // Get the object from the oid
-    let obj = repo.revparse_single(&oid.to_string()).unwrap();
-    // println!("{} {}\n--", obj.kind().unwrap().str(), obj.id());
+fn scan_object(obj: &Object, oid: &Oid, conf: HashMap<&str, &str>) {
+    
     match obj.kind() {
         // Only grab objects associated with blobs
         Some(ObjectType::Blob) => {
-            let blob_str = match from_utf8(obj.as_blob().unwrap().content()) {
+            let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
                 Ok(x) => x,
                 Err(_) => return,
             };
