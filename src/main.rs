@@ -16,6 +16,69 @@ macro_rules! critical {
 }
 
 fn main() {
+
+    // Get path to git repo via command line args or assume current directory
+    let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
+
+    // Open git repo
+    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+
+    println!(
+        "{} {} state={:?}",
+        info!(),
+        repo.path().display(),
+        repo.state()
+    );
+    println!("--------------------------------------------------------------------------");
+
+    // Get object database from the repo
+    let odb = repo.odb().unwrap();
+
+    // Loop through objects in db
+    odb.foreach(|oid| {
+        let obj = repo.revparse_single(&oid.to_string()).unwrap();
+
+        // Look for secrets in the object
+        scan_object(&obj, oid);
+
+        // Return true because the closure has to return a boolean
+        true
+    })
+    .unwrap();
+}
+
+fn scan_object(obj: &Object, oid: &Oid) {
+    
+    match obj.kind() {
+        // Only grab objects associated with blobs
+        Some(ObjectType::Blob) => {
+            let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
+                Ok(x) => x,
+                Err(_) => return,
+            };
+            // println!("{}",blob_str);
+
+            // Check if the blob contains secrets
+            match find_secrets(blob_str) {
+                Some(secrets_found) => {
+                    for bad in secrets_found {
+                        println!(
+                            "{} object {} has a secret of type `{}`",
+                            critical!(),
+                            oid,
+                            bad
+                        );
+                    }
+                }
+                // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
+                None => (),
+            }
+        }
+        _ => (), // only care about the blobs so ignore anything else.
+    }
+}
+// find_secrets : if secrets are found in blob then they are returned as a vector, otherwise return None
+fn find_secrets(blob: &str) -> Option<Vec<String>> {
     let rules = HashMap::from([
         ("Slack Token", "(xox[p|b|o|a]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})"),
         ("RSA private key", "-----BEGIN RSA PRIVATE KEY-----"),
@@ -37,82 +100,17 @@ fn main() {
         ("Password in URL", "[a-zA-Z]{3,10}://[^/\\s:@]{3,20}:[^/\\s:@]{3,20}@.{1,100}[\"'\\s]"),
     ]);
 
-    // Get path to git repo via command line args or assume current directory
-    let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
-
-    // Open git repo
-    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
-
-    println!(
-        "{} {} state={:?}",
-        info!(),
-        repo.path().display(),
-        repo.state()
-    );
-    println!("{} checking {} key templates", info!(), rules.len());
-    println!("--------------------------------------------------------------------------");
-
-    // Get object database from the repo
-    let odb = repo.odb().unwrap();
-
-    // Loop through objects in db
-    odb.foreach(|oid| {
-
-        let config = rules.clone();
-        let obj = repo.revparse_single(&oid.to_string()).unwrap();
-
-        // Look for secrets in the object
-        scan_object(&obj, oid, config);
-
-        // Return true because the closure has to return a boolean
-        true
-    })
-    .unwrap();
-}
-
-fn scan_object(obj: &Object, oid: &Oid, conf: HashMap<&str, &str>) {
-    
-    match obj.kind() {
-        // Only grab objects associated with blobs
-        Some(ObjectType::Blob) => {
-            let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
-                Ok(x) => x,
-                Err(_) => return,
-            };
-            // println!("{}",blob_str);
-
-            // Check if the blob contains secrets
-            match is_bad(blob_str, &conf) {
-                Some(bad_commits) => {
-                    for bad in bad_commits {
-                        println!(
-                            "{} object {} has a secret of type `{}`",
-                            critical!(),
-                            oid,
-                            bad
-                        );
-                    }
-                }
-                // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
-                None => (),
-            }
-        }
-        _ => (), // only care about the blobs so ignore anything else.
-    }
-}
-// is_bad : if secrets are found in blob then they are returned as a vector, otherwise return None
-fn is_bad(maybe: &str, bads: &HashMap<&str, &str>) -> Option<Vec<String>> {
-    let mut bad_commits = vec![];
-    for (key, val) in bads {
+    let mut secrets_found = vec![];
+    for (key, val) in rules {
         // Use regex from rules file to match against blob
         let re = Regex::new(val).unwrap();
-        if re.is_match(maybe) {
-            bad_commits.push(key.to_string());
+        if re.is_match(blob) {
+            secrets_found.push(key.to_string());
         }
     }
-    if bad_commits.len() > 0 {
+    if secrets_found.len() > 0 {
         // Return bad commits if there are any
-        return Some(bad_commits);
+        return Some(secrets_found);
     }
     None
 }
