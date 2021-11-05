@@ -1,4 +1,4 @@
-use git2::{ObjectType, Object, Oid, Repository};
+use git2::{Object, ObjectType, Oid, Repository};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -16,9 +16,8 @@ macro_rules! critical {
 }
 
 fn main() {
-
     // Get path to git repo via command line args or assume current directory
-    let repo_root: String = std::env::args().nth(1).unwrap_or(".".to_string());
+    let repo_root: String = std::env::args().nth(1).unwrap_or_else(|| ".".to_string());
 
     // Open git repo
     let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
@@ -48,33 +47,24 @@ fn main() {
 }
 
 fn scan_object(obj: &Object, oid: &Oid) {
-    
-    match obj.kind() {
-        // Only grab objects associated with blobs
-        Some(ObjectType::Blob) => {
-            let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
-                Ok(x) => x,
-                Err(_) => return,
-            };
-            // println!("{}",blob_str);
+    if let Some(ObjectType::Blob) = obj.kind() {
+        let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
+            Ok(x) => x,
+            Err(_) => return,
+        };
+        // println!("{}",blob_str);
 
-            // Check if the blob contains secrets
-            match find_secrets(blob_str) {
-                Some(secrets_found) => {
-                    for bad in secrets_found {
-                        println!(
-                            "{} object {} has a secret of type `{}`",
-                            critical!(),
-                            oid,
-                            bad
-                        );
-                    }
-                }
-                // None => println!("{} oid {} is {}", INFO, oid, "safe".to_string()),
-                None => (),
+        // Check if the blob contains secrets
+        if let Some(secrets_found) = find_secrets(blob_str) {
+            for bad in secrets_found {
+                println!(
+                    "{} object {} has a secret of type `{}`",
+                    critical!(),
+                    oid,
+                    bad
+                );
             }
         }
-        _ => (), // only care about the blobs so ignore anything else.
     }
 }
 // find_secrets : if secrets are found in blob then they are returned as a vector, otherwise return None
@@ -108,7 +98,7 @@ fn find_secrets(blob: &str) -> Option<Vec<String>> {
             secrets_found.push(key.to_string());
         }
     }
-    if secrets_found.len() > 0 {
+    if !secrets_found.is_empty() {
         // Return bad commits if there are any
         return Some(secrets_found);
     }
