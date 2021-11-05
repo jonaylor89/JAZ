@@ -67,6 +67,7 @@ fn scan_object(obj: &Object, oid: &Oid) {
         }
     }
 }
+
 // find_secrets : if secrets are found in blob then they are returned as a vector, otherwise return None
 fn find_secrets(blob: &str) -> Option<Vec<String>> {
     let rules = HashMap::from([
@@ -98,6 +99,7 @@ fn find_secrets(blob: &str) -> Option<Vec<String>> {
             secrets_found.push(key.to_string());
         }
     }
+
     if !secrets_found.is_empty() {
         // Return bad commits if there are any
         return Some(secrets_found);

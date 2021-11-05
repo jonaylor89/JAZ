@@ -1,6 +1,8 @@
-# CMSC 622 Final Project  
 
 # JAZ - Git Repo Secret Scanning  
+
+blog post:
+[https://blog.jonaylor.xyz/discover-hidden-secrets-in-git-repos-with-rust](https://blog.jonaylor.xyz/discover-hidden-secrets-in-git-repos-with-rust)
 
 ### Intro
 
