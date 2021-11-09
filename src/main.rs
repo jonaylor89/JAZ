@@ -1,13 +1,16 @@
 use git2::{ObjectType, OdbObject, Repository};
 use once_cell::sync::Lazy;
 use regex::bytes::RegexSet;
+use std::ffi::OsString;
 
 const INFO: &str = "\x1b[32m[INFO]\x1b[0m";
 const CRITICAL: &str = "\x1b[31m[CRITICAL]\x1b[0m";
 
 fn main() {
     // Get path to git repo via command line args or assume current directory
-    let repo_root: String = std::env::args().nth(1).unwrap_or_else(|| ".".to_string());
+    let repo_root: OsString = std::env::args_os()
+        .nth(1)
+        .unwrap_or_else(|| OsString::from("."));
 
     // Open git repo
     let repo = Repository::open(&repo_root).expect("Couldn't open repository");
