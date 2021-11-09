@@ -2,18 +2,8 @@ use git2::{Object, ObjectType, Oid, Repository};
 use regex::Regex;
 use std::collections::HashMap;
 
-// Macros for logging
-macro_rules! info {
-    () => {
-        format!("{}[INFO]{}", "\x1B[32m", "\x1B[0m")
-    };
-}
-
-macro_rules! critical {
-    () => {
-        format!("{}[CRITICAL]{}", "\x1B[31m", "\x1B[0m")
-    };
-}
+const INFO: &str = "\x1b[32m[INFO]\x1b[0m";
+const CRITICAL: &str = "\x1b[31m[CRITICAL]\x1b[0m";
 
 fn main() {
     // Get path to git repo via command line args or assume current directory
@@ -24,7 +14,7 @@ fn main() {
 
     println!(
         "{} {} state={:?}",
-        info!(),
+        INFO,
         repo.path().display(),
         repo.state()
     );
@@ -59,7 +49,7 @@ fn scan_object(obj: &Object, oid: &Oid) {
             for bad in secrets_found {
                 println!(
                     "{} object {} has a secret of type `{}`",
-                    critical!(),
+                    CRITICAL,
                     oid,
                     bad
                 );
