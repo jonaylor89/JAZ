@@ -10,7 +10,7 @@ fn main() {
     let repo_root: String = std::env::args().nth(1).unwrap_or_else(|| ".".to_string());
 
     // Open git repo
-    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+    let repo = Repository::open(&repo_root).expect("Couldn't open repository");
 
     println!(
         "{} {} state={:?}",
@@ -47,12 +47,7 @@ fn scan_object(obj: &Object, oid: &Oid) {
         // Check if the blob contains secrets
         if let Some(secrets_found) = find_secrets(blob_str) {
             for bad in secrets_found {
-                println!(
-                    "{} object {} has a secret of type `{}`",
-                    CRITICAL,
-                    oid,
-                    bad
-                );
+                println!("{} object {} has a secret of type `{}`", CRITICAL, oid, bad);
             }
         }
     }
