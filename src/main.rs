@@ -1,30 +1,23 @@
-use git2::{Object, ObjectType, Oid, Repository};
-use regex::Regex;
-use std::collections::HashMap;
+use git2::{ObjectType, OdbObject, Repository};
+use once_cell::sync::Lazy;
+use regex::bytes::RegexSet;
+use std::ffi::OsString;
 
-// Macros for logging
-macro_rules! info {
-    () => {
-        format!("{}[INFO]{}", "\x1B[32m", "\x1B[0m")
-    };
-}
-
-macro_rules! critical {
-    () => {
-        format!("{}[CRITICAL]{}", "\x1B[31m", "\x1B[0m")
-    };
-}
+const INFO: &str = "\x1b[32m[INFO]\x1b[0m";
+const CRITICAL: &str = "\x1b[31m[CRITICAL]\x1b[0m";
 
 fn main() {
     // Get path to git repo via command line args or assume current directory
-    let repo_root: String = std::env::args().nth(1).unwrap_or_else(|| ".".to_string());
+    let repo_root: OsString = std::env::args_os()
+        .nth(1)
+        .unwrap_or_else(|| OsString::from("."));
 
     // Open git repo
-    let repo = Repository::open(repo_root.as_str()).expect("Couldn't open repository");
+    let repo = Repository::open(&repo_root).expect("Couldn't open repository");
 
     println!(
         "{} {} state={:?}",
-        info!(),
+        INFO,
         repo.path().display(),
         repo.state()
     );
@@ -34,11 +27,11 @@ fn main() {
     let odb = repo.odb().unwrap();
 
     // Loop through objects in db
-    odb.foreach(|oid| {
-        let obj = repo.revparse_single(&oid.to_string()).unwrap();
+    odb.foreach(|&oid| {
+        let obj = odb.read(oid).unwrap();
 
         // Look for secrets in the object
-        scan_object(&obj, oid);
+        scan_object(&obj);
 
         // Return true because the closure has to return a boolean
         true
@@ -46,31 +39,26 @@ fn main() {
     .unwrap();
 }
 
-fn scan_object(obj: &Object, oid: &Oid) {
-    if let Some(ObjectType::Blob) = obj.kind() {
-        let blob_str = match std::str::from_utf8(obj.as_blob().unwrap().content()) {
-            Ok(x) => x,
-            Err(_) => return,
-        };
-        // println!("{}",blob_str);
-
-        // Check if the blob contains secrets
-        if let Some(secrets_found) = find_secrets(blob_str) {
-            for bad in secrets_found {
-                println!(
-                    "{} object {} has a secret of type `{}`",
-                    critical!(),
-                    oid,
-                    bad
-                );
-            }
+fn scan_object(obj: &OdbObject) {
+    if obj.kind() != ObjectType::Blob {
+        return;
+    }
+    // Check if the blob contains secrets
+    if let Some(secrets_found) = find_secrets(obj.data()) {
+        for bad in secrets_found {
+            println!(
+                "{} object {} has a secret of type `{}`",
+                CRITICAL,
+                obj.id(),
+                bad
+            );
         }
     }
 }
 
 // find_secrets : if secrets are found in blob then they are returned as a vector, otherwise return None
-fn find_secrets(blob: &str) -> Option<Vec<String>> {
-    let rules = HashMap::from([
+fn find_secrets(blob: &[u8]) -> Option<Vec<&'static str>> {
+    const RULES: &[(&str, &str)] = &[
         ("Slack Token", "(xox[p|b|o|a]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})"),
         ("RSA private key", "-----BEGIN RSA PRIVATE KEY-----"),
         ("SSH (OPENSSH) private key", "-----BEGIN OPENSSH PRIVATE KEY-----"),
@@ -89,20 +77,15 @@ fn find_secrets(blob: &str) -> Option<Vec<String>> {
         ("Google (GCP) Service-account", "\"type\": \"service_account\""),
         ("Twilio API Key", "SK[a-z0-9]{32}"),
         ("Password in URL", "[a-zA-Z]{3,10}://[^/\\s:@]{3,20}:[^/\\s:@]{3,20}@.{1,100}[\"'\\s]"),
-    ]);
+    ];
+    static REGEX_SET: Lazy<RegexSet> = Lazy::new(|| {
+        RegexSet::new(RULES.iter().map(|&(_, regex)| regex)).expect("All regexes should be valid")
+    });
 
-    let mut secrets_found = vec![];
-    for (key, val) in rules {
-        // Use regex from rules file to match against blob
-        let re = Regex::new(val).unwrap();
-        if re.is_match(blob) {
-            secrets_found.push(key.to_string());
-        }
+    let matches = REGEX_SET.matches(blob);
+    if !matches.matched_any() {
+        return None;
     }
 
-    if !secrets_found.is_empty() {
-        // Return bad commits if there are any
-        return Some(secrets_found);
-    }
-    None
+    Some(matches.iter().map(|i| RULES[i].0).collect())
 }
