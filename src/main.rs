@@ -39,6 +39,7 @@ fn main() {
     .unwrap();
 }
 
+/// scan_object : Scan contents of `obj` and print to the console if it contains a secret
 fn scan_object(obj: &OdbObject) {
     if obj.kind() != ObjectType::Blob {
         return;
@@ -56,7 +57,7 @@ fn scan_object(obj: &OdbObject) {
     }
 }
 
-// find_secrets : if secrets are found in blob then they are returned as a vector, otherwise return None
+/// find_secrets : if secrets are found in `blob` then they are returned as a vector, otherwise return None
 fn find_secrets(blob: &[u8]) -> Option<Vec<&'static str>> {
     const RULES: &[(&str, &str)] = &[
         ("Slack Token", "(xox[p|b|o|a]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})"),
@@ -88,4 +89,27 @@ fn find_secrets(blob: &[u8]) -> Option<Vec<&'static str>> {
     }
 
     Some(matches.iter().map(|i| RULES[i].0).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_nothing() {
+
+        let secret: &[u8] = &"Nothing to see here".as_bytes();
+        let result: Option<Vec<& 'static str>> = find_secrets(secret);
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn find_ssh_key() {
+
+        let secret: &[u8] = &"-----BEGIN OPENSSH PRIVATE KEY-----".as_bytes();
+        let result: Vec<& 'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.iter().next().expect("Should contain one secret type"), &"SSH (OPENSSH) private key");
+    }
 }
