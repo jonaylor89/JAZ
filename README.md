@@ -33,7 +33,7 @@ As of now we are scanning for the following secrets based off common regex patte
  
 ### Design
 
-To scan we open the object database and for every object in the database we spawn a thread and check its contents. In each object we scan through and look for regex patterns of common keys provided by an array.  In the future we'd like this array to be configurable and for there to be a pool of threads to distribute work across as opposed to spawning a thread for each operation as we do now.
+In each object contained in the object database, we scan through and look for regex patterns of common keys provided by an array. If any secrets are found, the script simply prints the secret type to the console and provides the object id.
 
 ### Improvements  
 
