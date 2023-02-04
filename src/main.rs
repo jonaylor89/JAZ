@@ -97,19 +97,20 @@ mod tests {
 
     #[test]
     fn find_nothing() {
-
         let secret: &[u8] = "Nothing to see here".as_bytes();
-        let result: Option<Vec<& 'static str>> = find_secrets(secret);
+        let result: Option<Vec<&'static str>> = find_secrets(secret);
 
         assert!(result.is_none());
     }
 
     #[test]
     fn find_ssh_key() {
-
         let secret: &[u8] = "-----BEGIN OPENSSH PRIVATE KEY-----".as_bytes();
-        let result: Vec<& 'static str> = find_secrets(secret).expect("Should find a secret");
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
 
-        assert_eq!(result.get(0).expect("Should contain one secret type"), &"SSH (OPENSSH) private key");
+        assert_eq!(
+            result.get(0).expect("Should contain one secret type"),
+            &"SSH (OPENSSH) private key"
+        );
     }
 }
