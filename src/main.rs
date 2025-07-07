@@ -94,6 +94,8 @@ fn find_secrets(blob: &[u8]) -> Option<Vec<&'static str>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use git2::{ObjectType, Repository};
+    use std::fs;
 
     #[test]
     fn find_nothing() {
@@ -104,13 +106,237 @@ mod tests {
     }
 
     #[test]
-    fn find_ssh_key() {
+    fn find_ssh_openssh_key() {
         let secret: &[u8] = "-----BEGIN OPENSSH PRIVATE KEY-----".as_bytes();
         let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
 
-        assert_eq!(
-            result.get(0).expect("Should contain one secret type"),
-            &"SSH (OPENSSH) private key"
-        );
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "SSH (OPENSSH) private key");
+    }
+
+    #[test]
+    fn find_rsa_private_key() {
+        let secret: &[u8] = "-----BEGIN RSA PRIVATE KEY-----".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "RSA private key");
+    }
+
+    #[test]
+    fn find_ssh_dsa_key() {
+        let secret: &[u8] = "-----BEGIN DSA PRIVATE KEY-----".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "SSH (DSA) private key");
+    }
+
+    #[test]
+    fn find_ssh_ec_key() {
+        let secret: &[u8] = "-----BEGIN EC PRIVATE KEY-----".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "SSH (EC) private key");
+    }
+
+    #[test]
+    fn find_pgp_private_key() {
+        let secret: &[u8] = "-----BEGIN PGP PRIVATE KEY BLOCK-----".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "PGP private key block");
+    }
+
+    #[test]
+    fn find_aws_api_key() {
+        let secret: &[u8] = "AKIAIOSFODNN7EXAMPLE".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "AWS API Key");
+    }
+
+    #[test]
+    fn find_github_token() {
+        let secret: &[u8] = "github \"1234567890abcdef1234567890abcdef12345\" ".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "GitHub");
+    }
+
+    #[test]
+    fn find_google_oauth() {
+        let secret: &[u8] = "\"client_secret\":\"abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Google Oauth");
+    }
+
+    #[test]
+    fn find_heroku_api_key() {
+        let secret: &[u8] = "heroku 12345678-1234-1234-1234-123456789012".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Heroku API Key");
+    }
+
+    #[test]
+    fn find_generic_secret() {
+        let secret: &[u8] = "secret \"abcdef1234567890abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Generic Secret");
+    }
+
+    #[test]
+    fn find_generic_api_key() {
+        let secret: &[u8] = "api_key \"abcdef1234567890abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Generic API Key");
+    }
+
+    #[test]
+    fn find_gcp_service_account() {
+        let secret: &[u8] = "\"type\": \"service_account\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Google (GCP) Service-account");
+    }
+
+    #[test]
+    fn find_password_in_url() {
+        let secret: &[u8] = "https://user:password@example.com/path \"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Password in URL");
+    }
+
+    #[test]
+    fn find_facebook_oauth() {
+        let secret: &[u8] = "facebook \"abcdef1234567890abcdef1234567890\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Facebook Oauth");
+    }
+
+    #[test]
+    fn find_twitter_oauth() {
+        let secret: &[u8] = "twitter \"abcdef1234567890abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Twitter Oauth");
+    }
+
+    #[test]
+    fn find_multiple_secrets() {
+        let secret: &[u8] = "-----BEGIN RSA PRIVATE KEY-----\nAKIAIOSFODNN7EXAMPLE\n".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find secrets");
+
+        assert_eq!(result.len(), 2);
+        assert!(result.contains(&"RSA private key"));
+        assert!(result.contains(&"AWS API Key"));
+    }
+
+    #[test]
+    fn find_secrets_case_insensitive() {
+        let secret: &[u8] = "SECRET \"abcdef1234567890abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Generic Secret");
+    }
+
+    #[test]
+    fn find_secrets_with_whitespace() {
+        let secret: &[u8] = "api_key  \"abcdef1234567890abcdef1234567890abcdef12\"".as_bytes();
+        let result: Vec<&'static str> = find_secrets(secret).expect("Should find a secret");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "Generic API Key");
+    }
+
+    #[test]
+    fn empty_blob() {
+        let secret: &[u8] = "".as_bytes();
+        let result: Option<Vec<&'static str>> = find_secrets(secret);
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn binary_data() {
+        let secret: &[u8] = &[0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD];
+        let result: Option<Vec<&'static str>> = find_secrets(secret);
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn very_long_input() {
+        let long_string = "x".repeat(10000);
+        let secret: &[u8] = long_string.as_bytes();
+        let result: Option<Vec<&'static str>> = find_secrets(secret);
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn scan_object_non_blob() {
+        let repo = Repository::init_bare("target/test_repo").unwrap();
+        let odb = repo.odb().unwrap();
+        
+        let tree_id = {
+            let tree_builder = repo.treebuilder(None).unwrap();
+            tree_builder.write().unwrap()
+        };
+        
+        if let Ok(obj) = odb.read(tree_id) {
+            assert_eq!(obj.kind(), ObjectType::Tree);
+        }
+        
+        fs::remove_dir_all("target/test_repo").ok();
+    }
+
+    #[test]
+    fn scan_object_with_secret() {
+        let repo = Repository::init_bare("target/test_repo2").unwrap();
+        let odb = repo.odb().unwrap();
+        
+        let secret_content = "AKIAIOSFODNN7EXAMPLE";
+        let blob_id = odb.write(ObjectType::Blob, secret_content.as_bytes()).unwrap();
+        let obj = odb.read(blob_id).unwrap();
+        
+        assert_eq!(obj.kind(), ObjectType::Blob);
+        assert!(find_secrets(obj.data()).is_some());
+        
+        fs::remove_dir_all("target/test_repo2").ok();
+    }
+
+    #[test]
+    fn scan_object_without_secret() {
+        let repo = Repository::init_bare("target/test_repo3").unwrap();
+        let odb = repo.odb().unwrap();
+        
+        let normal_content = "This is just normal text content";
+        let blob_id = odb.write(ObjectType::Blob, normal_content.as_bytes()).unwrap();
+        let obj = odb.read(blob_id).unwrap();
+        
+        assert_eq!(obj.kind(), ObjectType::Blob);
+        assert!(find_secrets(obj.data()).is_none());
+        
+        fs::remove_dir_all("target/test_repo3").ok();
     }
 }

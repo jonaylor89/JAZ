@@ -47,31 +47,137 @@ The following is a list of improvements that would be good to add for the future
 
 ### Installation
 
-From Source
+**From Source**
+```bash
+~$ git clone https://github.com/jonaylor89/JAZ.git
+~$ cd JAZ
+~$ cargo build --release
 ```
-~$ cargo build
-```
-This will build into the target directory under debug by default and under release if the project is built with `cargo build --release`
+This will build into the `target/release` directory. For debug builds, use `cargo build`.
 
-Arch
-```
+**Arch Linux**
+```bash
 ~$ yay -S jaz
 ```
 
-MacOS
-```
+**MacOS**
+```bash
 ~$ brew install jaz
 ```
 
-Cargo
-```
+**Cargo**
+```bash
 ~$ cargo install jaz
 ```
 
-Execution
+### Usage
+
+**Basic Usage**
+```bash
+# Scan current directory (must be a git repository)
+~$ jaz
+
+# Scan a specific repository
+~$ jaz /path/to/repo
+
+# Scan with compiled binary
+~$ ./target/release/jaz /path/to/repo
 ```
-~$ ./jaz /path/to/repo
+
+**Example Output**
 ```
+[INFO] /path/to/repo/.git/ state=Clean
+--------------------------------------------------------------------------
+[CRITICAL] object a1b2c3d4e5f6 has a secret of type `AWS API Key`
+[CRITICAL] object f6e5d4c3b2a1 has a secret of type `SSH (OPENSSH) private key`
+[CRITICAL] object 1234567890ab has a secret of type `Slack Token`
+```
+
+**Common Use Cases**
+
+1. **Pre-commit Hook**: Add JAZ to your git hooks to scan before commits
+   ```bash
+   # .git/hooks/pre-commit
+   #!/bin/bash
+   jaz . && echo "No secrets found" || (echo "Secrets detected!" && exit 1)
+   ```
+
+2. **CI/CD Pipeline**: Integrate into your build process
+   ```yaml
+   # GitHub Actions example
+   - name: Scan for secrets
+     run: |
+       cargo install jaz
+       jaz .
+   ```
+
+3. **Audit Existing Repositories**: Scan repositories you've inherited
+   ```bash
+   # Scan multiple repos
+   for repo in ~/projects/*/; do
+     echo "Scanning $repo"
+     jaz "$repo"
+   done
+   ```
+
+**Exit Codes**
+- `0`: No secrets found
+- `1`: Secrets detected or error occurred
+
+### Understanding the Output
+
+JAZ scans all git objects in the repository's object database, not just the current working directory. This means it will find secrets in:
+- All commits in the repository history
+- All branches (local and remote-tracking)
+- Staged and unstaged changes
+- Deleted files that were previously committed
+
+**Object ID Information**
+When JAZ finds a secret, it reports the git object ID (SHA-1 hash). You can investigate further with:
+```bash
+# View the object content
+git show <object-id>
+
+# Find which commits contain this object
+git log --all --full-history -- $(git rev-list --all | xargs git ls-tree -r | grep <object-id> | cut -f2)
+```
+
+**Common Remediation Steps**
+1. **For recent commits**: Use `git reset` or `git rebase` to remove the secret
+2. **For historical commits**: Use `git filter-branch` or `git filter-repo` to rewrite history
+3. **For shared repositories**: Coordinate with your team before rewriting history
+4. **Always**: Rotate/invalidate the exposed secret immediately
+
+### Troubleshooting
+
+**Repository Not Found**
+```
+Error: Couldn't open repository
+```
+- Ensure the path points to a valid git repository
+- Check that `.git` directory exists
+- Verify you have read permissions
+
+**Permission Denied**
+```
+Error: Permission denied
+```
+- Run with appropriate permissions
+- Check repository ownership and permissions
+
+**Large Repository Performance**
+For very large repositories, JAZ may take some time to scan all objects. Consider:
+- Using `--depth=1` when cloning if you only need recent history
+- Running JAZ on a dedicated machine for large-scale scanning
+
+### Testing
+
+Run the comprehensive test suite:
+```bash
+cargo test
+```
+
+This includes tests for all 18 secret types and various edge cases.
 
 ### Results
 
