@@ -196,7 +196,7 @@ dependencies = [
 
 [[package]]
 name = "jaz"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "git2",
  "once_cell",
