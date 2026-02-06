@@ -1,6 +1,6 @@
 [package]
 name = "jaz"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Johannes Naylor <jonaylor89@gmail.com>", "Zephyr Headley <headleyjz@vcu.edu>"]
 edition = "2021"
 description = "Find secrets hidden in commits"
